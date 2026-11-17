@@ -1,0 +1,15 @@
+[package]
+name = "rupa-detect"
+description = "Agent status: manifests, regions, gates, reconciler, rollup. Pure: no I/O."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rupa-screen.workspace = true
+rupa-proto.workspace = true
+
+[lints]
+workspace = true

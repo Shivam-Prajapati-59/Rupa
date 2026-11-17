@@ -1,0 +1,32 @@
+# Build output
+target/
+
+# Terminal captures can contain secrets (TECH_SPEC P1-S1). Only redacted goldens go to tests/golden/.
+captures/
+
+# Local-only study material about herdr (clone, research, old plan); never committed
+reference/
+
+# rupa backup files
+*.rupa-bak
+
+# Secrets and local config
+.env
+.env.*
+*.pem
+*.key
+
+# Per-machine agent settings (project skills in .claude/skills ARE committed)
+.claude/settings.local.json
+
+# Logs and crash dumps from local runs
+*.log
+crash-*.txt
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp

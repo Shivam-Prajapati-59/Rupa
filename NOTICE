@@ -1,0 +1,14 @@
+Rupa
+Copyright (c) 2026 Rupa contributors
+
+Licensed under either of the Apache License, Version 2.0 (LICENSE-APACHE) or the
+MIT license (LICENSE-MIT), at your option.
+
+Acknowledgements
+----------------
+Rupa's design studies herdr (https://github.com/herdrdev/herdr, Apache-2.0),
+a terminal workspace manager for coding agents. Rupa is an independent
+implementation. Where any material is adapted from herdr (for example the shape of
+agent-screen manifests or protocol constants), the adapted file or section carries a
+comment naming the herdr source path and version, and is covered by herdr's
+Apache-2.0 licence and copyright.

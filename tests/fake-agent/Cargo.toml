@@ -1,0 +1,11 @@
+[package]
+name = "fake-agent"
+description = "Scripted fake agent for end-to-end tests (built out in P2-S12)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true

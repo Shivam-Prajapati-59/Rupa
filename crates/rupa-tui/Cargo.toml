@@ -1,0 +1,16 @@
+[package]
+name = "rupa-tui"
+description = "ratatui shell: chrome, input handling and view model. render() is pure."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rupa-client.workspace = true
+rupa-model.workspace = true
+rupa-screen.workspace = true
+
+[lints]
+workspace = true

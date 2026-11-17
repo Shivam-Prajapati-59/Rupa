@@ -1,0 +1,19 @@
+[package]
+name = "rupa-server"
+description = "Daemon runtime: session actor, pane runtimes, render scheduler, status engine host, persistence."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rupa-model.workspace = true
+rupa-detect.workspace = true
+rupa-pty.workspace = true
+rupa-screen.workspace = true
+rupa-platform.workspace = true
+rupa-proto.workspace = true
+
+[lints]
+workspace = true

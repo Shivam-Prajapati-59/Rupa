@@ -1,0 +1,15 @@
+[package]
+name = "rupa-client"
+description = "Socket client library: connect, handshake, request/response, event streams."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rupa-proto.workspace = true
+rupa-platform.workspace = true
+
+[lints]
+workspace = true

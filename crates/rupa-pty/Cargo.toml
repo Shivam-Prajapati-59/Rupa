@@ -1,0 +1,14 @@
+[package]
+name = "rupa-pty"
+description = "PTY spawn, reader/writer threads, resize and exit."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rupa-platform.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,50 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/rupa",
+    "crates/rupa-proto",
+    "crates/rupa-platform",
+    "crates/rupa-pty",
+    "crates/rupa-screen",
+    "crates/rupa-detect",
+    "crates/rupa-model",
+    "crates/rupa-server",
+    "crates/rupa-client",
+    "crates/rupa-tui",
+    "tools/pty-capture",
+    "tests/fake-agent",
+]
+# spikes/ holds the never-built capture spike (moved into tools/ by P1-S1);
+# reference/ holds a read-only reference clone with its own workspace.
+exclude = ["spikes", "reference"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.94"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# Internal crates only. Third-party deps are added with `cargo add` (TECH_SPEC §6.1 rule 4,
+# never copy a version from a document) and pinned here as they appear.
+[workspace.dependencies]
+rupa-proto = { path = "crates/rupa-proto" }
+rupa-platform = { path = "crates/rupa-platform" }
+rupa-pty = { path = "crates/rupa-pty" }
+rupa-screen = { path = "crates/rupa-screen" }
+rupa-detect = { path = "crates/rupa-detect" }
+rupa-model = { path = "crates/rupa-model" }
+rupa-server = { path = "crates/rupa-server" }
+rupa-client = { path = "crates/rupa-client" }
+rupa-tui = { path = "crates/rupa-tui" }
+
+[workspace.lints.rust]
+# OS-specific unsafe lives only in rupa-platform, which opts out with #![allow(unsafe_code)].
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"

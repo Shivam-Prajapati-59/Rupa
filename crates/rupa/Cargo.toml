@@ -1,0 +1,20 @@
+[package]
+name = "rupa"
+description = "Rupa: a terminal agent runtime. One binary: client, daemon and CLI."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "rupa"
+path = "src/main.rs"
+
+[dependencies]
+rupa-server.workspace = true
+rupa-tui.workspace = true
+rupa-client.workspace = true
+
+[lints]
+workspace = true
