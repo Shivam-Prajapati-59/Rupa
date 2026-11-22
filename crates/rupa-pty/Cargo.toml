@@ -8,7 +8,11 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+portable-pty = "0.9.0"
 rupa-platform.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tempfile = "3.27.0"

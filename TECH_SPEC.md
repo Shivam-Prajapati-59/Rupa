@@ -351,12 +351,15 @@ flowchart BT
     bin --> server
     bin --> tui
     bin --> client
+    bin --> platform
 ```
+
+`bin --> platform` was added in P0-S4: process-wide setup (log file, crash file, `--version`) runs in the binary before any other crate starts and needs `rupa-platform::paths`.
 
 | Crate | Responsibility | Pure (no I/O)? |
 |---|---|---|
 | `rupa-proto` | request/response/event types, error codes, NDJSON codec, schema | yes |
-| `rupa-platform` | paths, IPC endpoint, process identity, job objects, clipboard backends, **all `cfg(target_os)` code** | no |
+| `rupa-platform` | paths, config loading (`config.toml`), IPC endpoint, process identity, job objects, clipboard backends, **all `cfg(target_os)` code** | no |
 | `rupa-pty` | PTY spawn, reader/writer threads, resize, exit | no |
 | `rupa-screen` | `Screen` trait; `vt100` implementation; row hashing and patches | yes |
 | `rupa-detect` | manifests, regions, gates, reconciler, hysteresis, rollup | **yes** |
@@ -1167,6 +1170,8 @@ Pane-originated OSC 52 clipboard writes are honoured only per config (`clipboard
 
 `<config_dir>/config.toml`: Windows `%APPDATA%\rupa\config.toml`; elsewhere `$XDG_CONFIG_HOME/rupa/config.toml`. Override with `RUPA_CONFIG_DIR`. Unknown keys warn. `rupa config default` prints this file.
 
+Load order: built-in defaults, then the user file, then `RUPA_*` overrides, then CLI flags. `RUPA_SESSION` and `--session <name>` override `server.session`; a present `[[agents]]` list replaces the built-in one rather than merging entry by entry. A syntax error is reported with its line and column: `rupa config check` exits 1, while normal startup logs the error and runs on the defaults, so a typo cannot brick the daemon.
+
 ```toml
 [server]
 session = "default"
@@ -1386,14 +1391,14 @@ Not in V1: Windows ARM64 (herdr has a dedicated workflow for it **[V]**), BSDs.
 | Domain | Crate | Version | Used by | Notes |
 |---|---|---|---|---|
 | TUI | `ratatui` | 0.30.2 | tui | **[V]** same major as herdr |
-| Host terminal | `crossterm` | 0.29.0 | tui | key and mouse events; herdr removed it on Windows in 0.9.4 for native console records **[V]**, so Windows key fidelity is a P1-S7 test, not an assumption |
+| Host terminal | `crossterm` | 0.29.0 | tui, bin (panic-hook restore) | key and mouse events; herdr removed it on Windows in 0.9.4 for native console records **[V]**, so Windows key fidelity is a P1-S7 test, not an assumption |
 | PTY | `portable-pty` | 0.9.0 | pty | herdr vendors patches (§5.1.3) |
 | Emulator | `vt100` | 0.18.1 | screen | D3; API checked **[V]** |
 | Emulator fallback | `alacritty_terminal` | 0.26.0 | screen | only if G1 demands it |
 | Async | `tokio` | 1.54.1 | server, client | `rt-multi-thread`, `sync`, `time`, `process`, `io-util`, `macros` |
 | IPC | `interprocess` | 2.4.8 | platform | `tokio` feature; same crate herdr uses **[V]** |
 | Serialisation | `serde`, `serde_json` | 1.0.229, 1.0.154 | all | |
-| Config | `toml` | 1.2.1 | config | note: major 1, not 0.8 as in r4 |
+| Config | `toml` | 1.2.1 | platform (config) | note: major 1, not 0.8 as in r4 |
 | Schema | `schemars` | 1.2.3 | proto | `api schema` |
 | CLI | `clap` (+ `clap_complete`) | 4.6.7 (4.6.11) | bin | derive |
 | Paths | `directories` | 6.0.0 | platform | |
@@ -1513,11 +1518,11 @@ Goal: a green, boring, three-OS workspace you never have to think about again. *
 - **Done when:** a fresh `cargo new hello && cargo run` succeeds from PowerShell.
 
 #### P0-S2 · Workspace skeleton · **S** · deps: P0-S1
-- [ ] Create the root `Cargo.toml` workspace with `resolver = "3"`, `edition = "2024"`, and `[workspace.dependencies]`.
-- [ ] Create empty crates: `rupa-proto`, `rupa-platform`, `rupa-pty`, `rupa-screen`, `rupa-detect`, `rupa-model`, `rupa-server`, `rupa-client`, `rupa-tui`, and the binary crate `rupa` (§4.5).
-- [ ] Add `tools/pty-capture` and `tests/fake-agent` as workspace members.
-- [ ] Add dependencies with `cargo add` (never copy versions from documents). Pin them in `[workspace.dependencies]`.
-- [ ] Add a `justfile`: `check`, `test`, `fmt`, `run`.
+- [x] Create the root `Cargo.toml` workspace with `resolver = "3"`, `edition = "2024"`, and `[workspace.dependencies]`.
+- [x] Create empty crates: `rupa-proto`, `rupa-platform`, `rupa-pty`, `rupa-screen`, `rupa-detect`, `rupa-model`, `rupa-server`, `rupa-client`, `rupa-tui`, and the binary crate `rupa` (§4.5).
+- [x] Add `tools/pty-capture` and `tests/fake-agent` as workspace members.
+- [ ] Add dependencies with `cargo add` (never copy versions from documents). Pin them in `[workspace.dependencies]`. Deferred: no external dependency exists yet; each slice adds its own with `cargo add` (only the path crates are pinned so far).
+- [x] Add a `justfile`: `check`, `test`, `fmt`, `run`.
 - **Done when:** `cargo check --workspace` is green; `cargo tree -d` reports no unexpected duplicates.
 
 #### P0-S3 · CI matrix · **S** · deps: P0-S2
@@ -1528,29 +1533,29 @@ Goal: a green, boring, three-OS workspace you never have to think about again. *
 - **Done when:** a trivial PR is green on all three OSes.
 
 #### P0-S4 · Paths, logging, panic hook · **S** · deps: P0-S2
-- [ ] In `rupa-platform::paths`, resolve `config_dir` and `state_dir` via `directories`.
-- [ ] Resolve `runtime_dir` yourself: `directories` returns `None` for it on macOS, on Windows, and on Linux without `XDG_RUNTIME_DIR`. Linux: `$XDG_RUNTIME_DIR/rupa`, else `/tmp/rupa-<uid>` (mode 0700, owner checked). macOS: `$TMPDIR/rupa-<uid>`. Windows: pipe name only, with its marker file under `%LOCALAPPDATA%\rupa`.
-- [ ] Assert the final socket path is shorter than 100 bytes (`sun_path` is 104 on macOS) and fail with a clear message otherwise.
-- [ ] Allow `RUPA_CONFIG_DIR`, `RUPA_STATE_DIR` and `RUPA_RUNTIME_DIR` overrides (tests depend on them).
-- [ ] Add `tracing` plus `tracing-appender` file logging to `<state_dir>/logs/`, with `RUPA_LOG` for the level. Never log to stdout or stderr in TUI mode.
-- [ ] Add a panic hook that writes `<state_dir>/crash-<ts>.txt` and restores the terminal (leave alternate screen, disable raw mode, show cursor).
-- [ ] Add `rupa --version` that prints version, commit and target.
+- [x] In `rupa-platform::paths`, resolve `config_dir` and `state_dir` via `directories`. **Spec correction [V]:** `directories` 6.0.0 returns a state dir only on Linux. Windows and macOS fall back to `data_local_dir` (Windows: `%LOCALAPPDATA%\rupa\data`, kept off the roaming profile). On macOS that equals `config_dir`, so state goes in a `state/` subfolder: wiping state must never delete the user's config.
+- [x] Resolve `runtime_dir` yourself: `directories` returns `None` for it on macOS, on Windows, and on Linux without `XDG_RUNTIME_DIR`. Linux: `$XDG_RUNTIME_DIR/rupa`, else `/tmp/rupa-<uid>` (mode 0700, owner checked). macOS: `$TMPDIR/rupa-<uid>`. Windows: pipe name only, with its marker file under `%LOCALAPPDATA%\rupa`.
+- [x] Assert the final socket path is shorter than 100 bytes (`sun_path` is 104 on macOS) and fail with a clear message otherwise.
+- [x] Allow `RUPA_CONFIG_DIR`, `RUPA_STATE_DIR` and `RUPA_RUNTIME_DIR` overrides (tests depend on them).
+- [x] Add `tracing` plus `tracing-appender` file logging to `<state_dir>/logs/`, with `RUPA_LOG` for the level. Never log to stdout or stderr in TUI mode. (Daily files, 7 kept; an unparsable `RUPA_LOG` falls back to `info`.)
+- [x] Add a panic hook that writes `<state_dir>/crash-<ts>.txt` and restores the terminal (leave alternate screen, disable raw mode, show cursor). Restore runs first; the file is `crash-<unix ms>-<pid>.txt`; if it can't be written the report goes to stderr.
+- [x] Add `rupa --version` that prints version, commit and target. (`build.rs` stamps `RUPA_COMMIT`, 12 hex or `unknown`, and `RUPA_TARGET`; `--version`/`-V` run before any setup and create nothing.)
 - **Done when:** a forced panic in a test binary leaves a crash file and a sane terminal.
 
 #### P0-S5 · Config loader · **S** · deps: P0-S4
-- [ ] Define `Config` structs with `#[serde(default)]` everywhere (§5.13).
-- [ ] Load order: built-in defaults, then user file, then `RUPA_*` env overrides, then CLI flags.
-- [ ] Warn (do not fail) on unknown keys; report parse errors with line and column.
-- [ ] Add `rupa config default | path | check`.
-- **Done when:** unit tests cover defaults, an override, an unknown key and a syntax error.
+- [x] Define `Config` structs with `#[serde(default)]` everywhere (§5.13). Lives in `rupa-platform::config`: that crate owns `config_dir`, and the `bin --> platform` / `server --> platform` edges already exist, so no new crate or edge.
+- [x] Load order: built-in defaults, then user file, then `RUPA_*` env overrides, then CLI flags. (`RUPA_SESSION` and `--session` are the only overrides §5.13 defines today; the seam is `Config::resolve`.)
+- [x] Warn (do not fail) on unknown keys; report parse errors with line and column. (Unknown keys come back as dotted paths such as `ui.colour`; `rupa config check` prints them to stdout as well as `tracing`.)
+- [x] Add `rupa config default | path | check`. (Hand-parsed argv, consistent with `--version`; `default` and `path` create nothing.)
+- **Done when:** unit tests cover defaults, an override, an unknown key and a syntax error. (`rupa-platform` `config::tests`, plus `crates/rupa/tests/config_cmd.rs` for the commands.)
 
 #### P0-S6 · Repo hygiene · **XS** · deps: P0-S2
-- [ ] Add `AGENTS.md` with the architecture invariants from §4.6.
-- [ ] Add `docs/adr/` with a template; record ADR-0001 (own daemon, not tmux) and ADR-0002 (name, licence).
-- [ ] Add `LICENSE-MIT` and `LICENSE-APACHE`, and a `NOTICE` that credits herdr for any adapted material.
-- [ ] Add `.gitignore` entries for `target/`, `captures/` (recordings can contain secrets), and `*.rupa-bak`.
-- [ ] Remove strays from the repo: add `reference/herdr/src/` to `.gitignore` and record where the reference clone lives in `docs/dev-setup.md` (this spec cites its paths, so keep it readable); delete the duplicate `r4-rust-stack.md` at the repo root.
-- **Done when:** `git status` is clean after a build.
+- [x] Add `AGENTS.md` with the architecture invariants from §4.6. (verified item by item; added the missing `PaneRuntime` clause to invariant 1)
+- [x] Add `docs/adr/` with a template; record ADR-0001 (own daemon, not tmux) and ADR-0002 (name, licence).
+- [x] Add `LICENSE-MIT` and `LICENSE-APACHE`, and a `NOTICE` that credits herdr for any adapted material.
+- [x] Add `.gitignore` entries for `target/`, `captures/` (recordings can contain secrets), and `*.rupa-bak`.
+- [x] Remove strays from the repo: add `reference/herdr/src/` to `.gitignore` and record where the reference clone lives in `docs/dev-setup.md` (this spec cites its paths, so keep it readable); delete the duplicate `r4-rust-stack.md` at the repo root.
+- **Done when:** `git status` is clean after a build. (verified: `git status --short` identical before and after `cargo build --workspace`; no new entries)
 
 ---
 
