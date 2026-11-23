@@ -4,7 +4,6 @@ mod cli;
 mod logging;
 mod panic_hook;
 
-use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rupa_platform::config::{Config, DEFAULT_CONFIG_TOML};
@@ -61,12 +60,12 @@ fn run() -> anyhow::Result<u8> {
     let paths = Paths::from_env()?;
 
     if cli.command == Some(Command::Config(ConfigCommand::Path)) {
-        println!("{}", config_path(&paths).display());
+        println!("{}", paths.config_file().display());
         return Ok(0);
     }
 
     let rupa_log = std::env::var("RUPA_LOG").ok();
-    let _log = logging::init(&paths.state_dir, rupa_log.as_deref())?;
+    let _log = logging::init(&paths.logs_dir(), rupa_log.as_deref())?;
     panic_hook::install(paths.state_dir.clone());
 
     if cli.command == Some(Command::Config(ConfigCommand::Check)) {
@@ -74,7 +73,7 @@ fn run() -> anyhow::Result<u8> {
     }
 
     let config = match Config::load(
-        &paths.config_dir,
+        &paths.config_file(),
         |key| std::env::var_os(key),
         &cli.overrides,
     ) {
@@ -88,11 +87,14 @@ fn run() -> anyhow::Result<u8> {
             // A typo in the file must not brick the daemon: report it and run on the defaults.
             // `rupa config check` is where an invalid file is an error (exit 1).
             tracing::error!(
-                path = %config_path(&paths).display(),
+                path = %paths.config_file().display(),
                 error = %err,
                 "config is invalid; using defaults"
             );
-            Config::default()
+            // Drop only the broken file: `RUPA_SESSION` and `--session` still apply.
+            Config::resolve(None, |key| std::env::var_os(key), &cli.overrides)
+                .map(|resolved| resolved.config)
+                .unwrap_or_default()
         }
     };
 
@@ -106,12 +108,8 @@ fn run() -> anyhow::Result<u8> {
 
 /// `rupa config check`: a CLI command, so warnings also go to stdout. Exit 1 on an invalid file.
 fn check(paths: &Paths, cli: &Cli) -> u8 {
-    let path = config_path(paths);
-    match Config::load(
-        &paths.config_dir,
-        |key| std::env::var_os(key),
-        &cli.overrides,
-    ) {
+    let path = paths.config_file();
+    match Config::load(&path, |key| std::env::var_os(key), &cli.overrides) {
         Ok(loaded) => {
             for warning in &loaded.warnings {
                 println!("warning: unknown key `{warning}`");
@@ -129,8 +127,4 @@ fn check(paths: &Paths, cli: &Cli) -> u8 {
             1
         }
     }
-}
-
-fn config_path(paths: &Paths) -> PathBuf {
-    paths.config_dir.join("config.toml")
 }

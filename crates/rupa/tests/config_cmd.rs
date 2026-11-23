@@ -110,6 +110,25 @@ fn an_invalid_file_does_not_stop_startup() {
 }
 
 #[test]
+fn an_invalid_file_still_keeps_the_cli_session() {
+    // Falling back to defaults must drop only the broken file, not `--session`.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    std::fs::create_dir_all(tmp.path().join("config")).expect("config dir");
+    std::fs::write(
+        tmp.path().join("config").join("config.toml"),
+        "[ui]\ntheme = \"dark\n",
+    )
+    .expect("write config");
+
+    let out = run(tmp.path(), &["--session=work"]);
+    assert!(out.status.success(), "exit: {:?}", out.status);
+
+    let logs = read_logs(&tmp.path().join("state"));
+    assert!(logs.contains("config is invalid"), "logs: {logs:?}");
+    assert!(logs.contains("session=work"), "logs: {logs:?}");
+}
+
+#[test]
 fn cli_session_beats_the_environment() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let out = Command::new(env!("CARGO_BIN_EXE_rupa"))

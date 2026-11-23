@@ -16,6 +16,8 @@ Generated from the slice headers in `TECH_SPEC.md` §8 on 2026-11-15. If a slice
 - [x] **P0-S5** Config loader (S). Green on Windows and Linux (WSL).
 - [x] **P0-S6** Repo hygiene (XS)
 
+**Phase 0 architecture review (2026-11-22, `/improve-codebase-architecture`):** A (deepen `Paths` into the one "where" module: `config_file()`, `logs_dir()`, `socket_path()`, one "empty = unset" rule) **done**. B (a `Startup` module out of `main.rs`) **do at the start of Phase 2**, when daemon and attach roles arrive. C (config key lists; guarded by a drift test) and D (config types in `rupa-platform`) **deferred** until real friction.
+
 ## Phase 1 — Terminal core and the fidelity gate
 
 - [ ] **P1-S1** Capture and replay tool (M)

@@ -1521,7 +1521,7 @@ Goal: a green, boring, three-OS workspace you never have to think about again. *
 - [x] Create the root `Cargo.toml` workspace with `resolver = "3"`, `edition = "2024"`, and `[workspace.dependencies]`.
 - [x] Create empty crates: `rupa-proto`, `rupa-platform`, `rupa-pty`, `rupa-screen`, `rupa-detect`, `rupa-model`, `rupa-server`, `rupa-client`, `rupa-tui`, and the binary crate `rupa` (§4.5).
 - [x] Add `tools/pty-capture` and `tests/fake-agent` as workspace members.
-- [ ] Add dependencies with `cargo add` (never copy versions from documents). Pin them in `[workspace.dependencies]`. Deferred: no external dependency exists yet; each slice adds its own with `cargo add` (only the path crates are pinned so far).
+- [ ] Add dependencies with `cargo add` (never copy versions from documents). Pin them in `[workspace.dependencies]`. Partly done: each slice added its own third-party dependencies with `cargo add` in the crate's own `Cargo.toml` (`rupa-platform`, `rupa`, `rupa-pty`, `rupa-proto`, `rupa-server`), but `[workspace.dependencies]` still pins only the path crates. Remaining: move those third-party versions into `[workspace.dependencies]` and switch the crates to `workspace = true`.
 - [x] Add a `justfile`: `check`, `test`, `fmt`, `run`.
 - **Done when:** `cargo check --workspace` is green; `cargo tree -d` reports no unexpected duplicates.
 

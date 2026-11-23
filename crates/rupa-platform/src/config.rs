@@ -380,14 +380,14 @@ impl Config {
         Ok(Resolved { config, warnings })
     }
 
-    /// Read `<config_dir>/config.toml` and resolve every layer. A missing file means defaults;
-    /// any other read error is reported.
+    /// Read the config file (normally [`Paths::config_file`](crate::paths::Paths::config_file))
+    /// and resolve every layer. A missing file means defaults; any other read error is reported.
     pub fn load(
-        config_dir: &Path,
+        config_file: &Path,
         env: impl Fn(&str) -> Option<OsString>,
         cli: &CliOverrides,
     ) -> Result<Loaded, ConfigError> {
-        let path = config_dir.join("config.toml");
+        let path = config_file.to_path_buf();
         let src = match std::fs::read_to_string(&path) {
             Ok(src) => Some(src),
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => None,
@@ -405,7 +405,10 @@ impl Config {
     /// `RUPA_*` overrides. Only variables that map to a config field are applied: `RUPA_SESSION`
     /// is the environment form of `--session` (§5.13, Appendix C).
     fn apply_env(&mut self, env: impl Fn(&str) -> Option<OsString>) {
-        if let Some(session) = non_empty(env("RUPA_SESSION")) {
+        // A session name must be text: a non-UTF-8 value is ignored rather than failing the
+        // whole config (unlike a path, which may hold any bytes).
+        let text = |key| crate::paths::env_value(&env, key).and_then(|v| v.into_string().ok());
+        if let Some(session) = text("RUPA_SESSION") {
             self.server.session = session;
         }
     }
@@ -416,14 +419,6 @@ impl Config {
             self.server.session.clone_from(session);
         }
     }
-}
-
-/// An empty variable (`RUPA_SESSION=`) means "unset", the usual shell convention. A non-UTF-8
-/// value is ignored rather than failing the whole config.
-fn non_empty(value: Option<OsString>) -> Option<String> {
-    value
-        .and_then(|v| v.into_string().ok())
-        .filter(|v| !v.is_empty())
 }
 
 /// A `toml` error as a line and column. Type errors without a span fall back to 1:1.
@@ -721,8 +716,12 @@ mod tests {
     #[test]
     fn missing_file_means_defaults() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let loaded = Config::load(dir.path(), env(&[]), &CliOverrides::default())
-            .expect("a missing file is fine");
+        let loaded = Config::load(
+            &dir.path().join("config.toml"),
+            env(&[]),
+            &CliOverrides::default(),
+        )
+        .expect("a missing file is fine");
         assert!(!loaded.read);
         assert_eq!(loaded.path, dir.path().join("config.toml"));
         assert_eq!(loaded.config, Config::default());
@@ -734,7 +733,12 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         std::fs::write(dir.path().join("config.toml"), "[ui]\ntheme = \"light\"\n")
             .expect("write config");
-        let loaded = Config::load(dir.path(), env(&[]), &CliOverrides::default()).expect("valid");
+        let loaded = Config::load(
+            &dir.path().join("config.toml"),
+            env(&[]),
+            &CliOverrides::default(),
+        )
+        .expect("valid");
         assert!(loaded.read);
         assert_eq!(loaded.config.ui.theme, "light");
     }

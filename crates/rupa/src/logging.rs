@@ -17,9 +17,10 @@ pub const DEFAULT_LEVEL: &str = "info";
 #[must_use = "dropping the guard stops logging"]
 pub struct LogGuard(#[allow(dead_code)] WorkerGuard);
 
-/// Install the file logger for this process. `rupa_log` is the value of `RUPA_LOG`.
-pub fn init(state_dir: &Path, rupa_log: Option<&str>) -> anyhow::Result<LogGuard> {
-    let (subscriber, guard) = build(state_dir, rupa_log)?;
+/// Install the file logger for this process. `logs_dir` is `Paths::logs_dir()`; `rupa_log`
+/// is the value of `RUPA_LOG`.
+pub fn init(logs_dir: &Path, rupa_log: Option<&str>) -> anyhow::Result<LogGuard> {
+    let (subscriber, guard) = build(logs_dir, rupa_log)?;
     tracing::subscriber::set_global_default(subscriber)?;
     Ok(LogGuard(guard))
 }
@@ -28,11 +29,10 @@ pub fn init(state_dir: &Path, rupa_log: Option<&str>) -> anyhow::Result<LogGuard
 const KEEP_DAYS: usize = 7;
 
 fn build(
-    state_dir: &Path,
+    logs_dir: &Path,
     rupa_log: Option<&str>,
 ) -> anyhow::Result<(impl Subscriber + Send + Sync, WorkerGuard)> {
-    let logs_dir = state_dir.join("logs");
-    std::fs::create_dir_all(&logs_dir)?;
+    std::fs::create_dir_all(logs_dir)?;
 
     // One file per day (rupa.2026-11-22.log), keeping a week: logs never fill the disk.
     let file = RollingFileAppender::builder()
@@ -40,7 +40,7 @@ fn build(
         .filename_prefix("rupa")
         .filename_suffix("log")
         .max_log_files(KEEP_DAYS)
-        .build(&logs_dir)?;
+        .build(logs_dir)?;
     // A background thread does the disk writes, so logging never stalls the caller.
     let (writer, guard) = tracing_appender::non_blocking(file);
 
@@ -75,7 +75,7 @@ mod tests {
 
     /// Log through a subscriber built for `state`, then flush by dropping the guard.
     fn log_with(state: &Path, rupa_log: Option<&str>, emit: impl FnOnce()) {
-        let (subscriber, guard) = build(state, rupa_log).expect("build logger");
+        let (subscriber, guard) = build(&state.join("logs"), rupa_log).expect("build logger");
         tracing::subscriber::with_default(subscriber, emit);
         drop(guard);
     }

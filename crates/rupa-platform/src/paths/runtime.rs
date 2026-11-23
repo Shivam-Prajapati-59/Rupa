@@ -63,18 +63,13 @@ impl Host {
     }
 }
 
-/// Where the runtime folder is for this process, from the real environment.
-pub fn runtime_dir_from_env() -> Result<PathBuf, RuntimeError> {
-    runtime_dir(Host::current(), |key| std::env::var_os(key))
-}
-
-/// Pure: only decides the path (no folder is created). `env` is injected so tests don't
-/// touch the real process environment.
-pub fn runtime_dir(
+/// Pure: only decides the path (no folder is created). Reached through
+/// [`Paths`](super::Paths); `env` is injected so tests don't touch the real environment.
+pub(crate) fn runtime_dir(
     host: Host,
     env: impl Fn(&str) -> Option<OsString>,
 ) -> Result<PathBuf, RuntimeError> {
-    let get = |key: &str| env(key).filter(|v| !v.is_empty());
+    let get = |key: &str| super::env_value(&env, key);
 
     if let Some(dir) = get("RUPA_RUNTIME_DIR") {
         return Ok(PathBuf::from(dir));
@@ -100,7 +95,8 @@ pub fn runtime_dir(
 }
 
 /// `<runtime_dir>/sessions/<session>/rupa.sock`, refusing paths the OS would reject.
-pub fn socket_path(runtime_dir: &Path, session: &str) -> Result<PathBuf, RuntimeError> {
+/// Callers use [`Paths::socket_path`](super::Paths::socket_path).
+pub(crate) fn socket_path(runtime_dir: &Path, session: &str) -> Result<PathBuf, RuntimeError> {
     let path = runtime_dir.join("sessions").join(session).join("rupa.sock");
     let len = path.as_os_str().len();
     if len >= MAX_SOCKET_PATH_BYTES {
