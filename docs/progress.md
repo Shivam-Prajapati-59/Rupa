@@ -4,17 +4,19 @@ Tick a slice here when it is merged and its **Done when** passes (TECH_SPEC §8.
 
 Generated from the slice headers in `TECH_SPEC.md` §8 on 2026-11-15. If a slice is added, split or renamed in the spec, update it here in the same change.
 
-**Current status:** the P0-S2 workspace skeleton and the P0-S6 hygiene files exist in the working tree, uncommitted, and `cargo check`/`clippy`/`fmt` pass locally. Nothing is ticked until it is merged and CI is green on all three OSes.
+**Current status:** Phase 0 code is done (P0-S1, S2, S4, S5, S6); only P0-S3 (CI) is open. `just check` passes on Windows and in WSL (Linux). GitHub Actions is not used for now (the account is on the free plan and its billing is locked), so `.github/workflows/ci.yml` was removed. **Gate G0 (CI green on all three OSes) is therefore on hold**: until CI returns, every slice is checked locally with `just check` on Windows and the same three commands in WSL, and macOS is untested. Bring CI back (restore the workflow from git history) before any release.
 
 
 ## Phase 0 — Foundations
 
 - [x] **P0-S1** Toolchain and dev environment (S)
-- [ ] **P0-S2** Workspace skeleton (S)
-- [ ] **P0-S3** CI matrix (S)
-- [ ] **P0-S4** Paths, logging, panic hook (S)
-- [ ] **P0-S5** Config loader (S)
-- [ ] **P0-S6** Repo hygiene (XS)
+- [x] **P0-S2** Workspace skeleton (S)
+- [ ] **P0-S3** CI matrix (S). On hold: GitHub Actions billing is locked. Blocks Gate G0.
+- [x] **P0-S4** Paths, logging, panic hook (S). Green on Windows and Linux (WSL); macOS untested until CI returns.
+- [x] **P0-S5** Config loader (S). Green on Windows and Linux (WSL).
+- [x] **P0-S6** Repo hygiene (XS)
+
+**Phase 0 architecture review (2026-11-22, `/improve-codebase-architecture`):** A (deepen `Paths` into the one "where" module: `config_file()`, `logs_dir()`, `socket_path()`, one "empty = unset" rule) **done**. B (a `Startup` module out of `main.rs`) **do at the start of Phase 2**, when daemon and attach roles arrive. C (config key lists; guarded by a drift test) and D (config types in `rupa-platform`) **deferred** until real friction.
 
 ## Phase 1 — Terminal core and the fidelity gate
 

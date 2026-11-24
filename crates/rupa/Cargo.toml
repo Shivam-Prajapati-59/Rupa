@@ -15,6 +15,15 @@ path = "src/main.rs"
 rupa-server.workspace = true
 rupa-tui.workspace = true
 rupa-client.workspace = true
+rupa-platform.workspace = true
+anyhow = "1.0.104"
+tracing = "0.1.44"
+tracing-appender = "0.2.5"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+crossterm = "0.29.0"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tempfile = "3.27.0"

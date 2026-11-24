@@ -31,7 +31,7 @@ If a task takes longer than ~90 minutes, split it and write the split down. If y
 
 ## 4. Architecture invariants (spec §4.6; violating one is a bug)
 
-1. **State is separate from runtime.** `AppState`/`PaneState` are plain data, constructible with no PTY (`AppState::test_new()`).
+1. **State is separate from runtime.** `AppState`/`PaneState` are plain data constructible without a PTY (`AppState::test_new()`); `PaneRuntime` owns PTYs, threads and channels.
 2. **Render is pure.** `compute_view()` does geometry and mutation; `render(&ViewModel)` only draws and returns a hit map.
 3. **Platform isolation.** All OS-specific code lives in `rupa-platform`. Elsewhere `#[cfg(target_os)]` appears only on imports, struct fields and match arms. `unsafe` is denied workspace-wide; only `rupa-platform` may `#![allow(unsafe_code)]`.
 4. **Detection is decoupled.** The status engine reads a *snapshot of the live bottom rows*, never the parser, a viewport or scrolled state.
@@ -42,7 +42,7 @@ If a task takes longer than ~90 minutes, split it and write the split down. If y
 9. **Wire compatibility is a test:** hand-written fixture bytes for hello, welcome, errors.
 10. **Unknown input is ignored, not fatal:** unknown JSON fields, manifest keys, escape sequences.
 
-**Crate layering** (arrows = "may depend on"; spec §4.5): `rupa` → `server`, `tui`, `client` · `server` → `model`, `detect`, `pty`, `screen`, `platform`, `proto` · `tui` → `client`, `model`, `screen` · `pty` → `platform` · `client` → `proto`, `platform` · `detect` → `screen`, `proto` · `model` → `proto`. **Pure crates (no I/O): `proto`, `screen`, `detect`, `model`.** Don't add an edge that isn't in the diagram.
+**Crate layering** (arrows = "may depend on"; spec §4.5): `rupa` → `server`, `tui`, `client`, `platform` · `server` → `model`, `detect`, `pty`, `screen`, `platform`, `proto` · `tui` → `client`, `model`, `screen` · `pty` → `platform` · `client` → `proto`, `platform` · `detect` → `screen`, `proto` · `model` → `proto`. **Pure crates (no I/O): `proto`, `screen`, `detect`, `model`.** Don't add an edge that isn't in the diagram.
 
 ## 5. Rust conventions
 

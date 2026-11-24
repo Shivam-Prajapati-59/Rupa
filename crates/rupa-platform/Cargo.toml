@@ -1,6 +1,6 @@
 [package]
 name = "rupa-platform"
-description = "Paths, IPC endpoint, process identity, job objects, clipboard. All cfg(target_os) code lives here."
+description = "Paths, config loading, IPC endpoint, process identity, job objects, clipboard. All cfg(target_os) code lives here."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,6 +8,16 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+directories = "6.0.0"
+serde = { version = "1.0.229", features = ["derive"] }
+thiserror = "2.0.21"
+toml = "1.2.2"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[target."cfg(unix)".dependencies]
+nix = { version = "0.32.0", features = ["user"] }
